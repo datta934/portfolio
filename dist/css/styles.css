@@ -1,0 +1,71 @@
+.main-bg {
+  background: url(../images/cool-background.png) no-repeat center;
+  background-position: top center;
+  background-size: cover;
+  height: 600px;
+}
+
+#menu-wrapper {
+  float: right;
+  -ms-writing-mode: tb;
+  writing-mode: tb;
+  -ms-writing-mode: tb-rl;
+  writing-mode: tb-rl;
+  -ms-writing-mode: tb-lr;
+  writing-mode: vertical-lr;
+  -ms-writing-mode: sideways-lr;
+  writing-mode: sideways-lr;
+}
+
+#menu-wrapper ul {
+  display: table;
+  height: 100vh;
+  text-align: center;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 0;
+  background-color: #fff;
+  font-size: 0px;
+}
+
+#menu-wrapper ul li {
+  display: inline-block;
+  float: left;
+  width: 16.66667%;
+  transition: all 0.1s;
+  text-align: center;
+  box-sizing: border-box;
+  text-shadow: 0px 1px 3px white;
+  border-right: thin solid lightgray;
+}
+
+#menu-wrapper ul li a {
+  display: block;
+  box-sizing: border-box;
+  padding-top: 19px;
+  height: 118px;
+  text-decoration: none;
+  font-size: 38px;
+  color: gray;
+}
+
+#menu-wrapper ul li a:visited {
+  color: gray;
+}
+
+#menu-wrapper ul li div {
+  margin-top: 5px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+#menu-wrapper ul li:last-child {
+  border-right: none;
+}
+
+#menu-wrapper ul li:hover {
+  background: #e6e6e6;
+  box-shadow: inset 10px 10px 10px -10px rgba(0, 0, 0, 0.3), inset -10px 10px 10px -10px rgba(0, 0, 0, 0.3);
+  width: 100px;
+  position: relative;
+}

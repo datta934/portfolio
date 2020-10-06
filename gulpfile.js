@@ -1,113 +1,137 @@
-// Load Node Modules/Plugins
-var gulp = require('gulp');
-var concat = require('gulp-concat');
-var uglify = require('gulp-uglify');
-var jshint = require('gulp-jshint');
-var imagemin = require('gulp-imagemin');
-var sass = require('gulp-sass');
-var connect = require('connect');
-var serve = require('serve-static');
-var browsersync = require('browser-sync');
-var postcss = require('gulp-postcss');
-var cssnext = require('postcss-cssnext');
-var cssnano = require('cssnano');
-var browserify = require('browserify');
-var source = require('vinyl-source-stream');
-var buffer = require('vinyl-buffer');
-var plumber = require('gulp-plumber');
-var beeper = require('beeper');
-var del = require('del');
-var sourcemaps = require('gulp-sourcemaps');
+"use strict";
 
-// Error Handler
-function onError(err) {
-    beeper();
-    console.log('Name:', err.name);
-    console.log('Reason:', err.reason);
-    console.log('File:', err.file);
-    console.log('Line:', err.line);
-    console.log('Column:', err.column);
+// Load plugins
+const autoprefixer = require("gulp-autoprefixer");
+const browsersync = require("browser-sync").create();
+const cleanCSS = require("gulp-clean-css");
+const del = require("del");
+const gulp = require("gulp");
+const header = require("gulp-header");
+const merge = require("merge-stream");
+const plumber = require("gulp-plumber");
+const rename = require("gulp-rename");
+const sass = require("gulp-sass");
+const uglify = require("gulp-uglify");
+const newer = require('gulp-newer');
+
+// BrowserSync
+function browserSync(done) {
+    browsersync.init({
+        server: {
+            baseDir: "./"
+        },
+        port: 3000
+    });
+    done();
 }
 
-// Process Styles
-gulp.task('styles', function () {
-    return gulp.src('assets/css/*.scss')
+// BrowserSync reload
+function browserSyncReload(done) {
+    browsersync.reload();
+    done();
+}
+
+// Clean vendor
+function clean() {
+    return del(["./vendor/"]);
+}
+
+// Bring third party dependencies from node_modules into vendor directory
+function modules() {
+    // Bootstrap
+    var bootstrap = gulp.src('./node_modules/bootstrap/dist/**/*')
+        .pipe(gulp.dest('./dist/vendor/bootstrap'));
+    // Font Awesome CSS
+    var fontAwesomeCSS = gulp.src('./node_modules/@fortawesome/fontawesome-free/css/**/*')
+        .pipe(gulp.dest('./dist/vendor/fontawesome-free/css'));
+    // Font Awesome Webfonts
+    var fontAwesomeWebfonts = gulp.src('./node_modules/@fortawesome/fontawesome-free/webfonts/**/*')
+        .pipe(gulp.dest('./dist/vendor/fontawesome-free/webfonts'));
+    // jQuery Easing
+    var jqueryEasing = gulp.src('./node_modules/jquery.easing/*.js')
+        .pipe(gulp.dest('./dist/vendor/jquery-easing'));
+    // Typed js
+    var typedJS = gulp.src('./node_modules/typed.js/lib/typed.min.js')
+        .pipe(gulp.dest('./dist/vendor/typed-js'));
+    // jQuery
+    var jquery = gulp.src([
+        './node_modules/jquery/dist/*',
+        '!./node_modules/jquery/dist/core.js'
+    ])
+        .pipe(gulp.dest('./dist/vendor/jquery'));
+    // Simple Line Icons
+    var simpleLineIconsFonts = gulp.src('./node_modules/simple-line-icons/fonts/**')
+        .pipe(gulp.dest('./dist/vendor/simple-line-icons/fonts'));
+    var simpleLineIconsCSS = gulp.src('./node_modules/simple-line-icons/css/**')
+        .pipe(gulp.dest('./dist/vendor/simple-line-icons/css'));
+    return merge(bootstrap, fontAwesomeCSS, fontAwesomeWebfonts, jquery, jqueryEasing, simpleLineIconsFonts, simpleLineIconsCSS, typedJS);
+}
+
+
+// CSS task
+function css() {
+    return gulp
+        .src("./assets/scss/*.scss")
+        .pipe(plumber())
         .pipe(sass({
-            outputStyle: 'compressed',
-            sourceComments: 'map',
-            sourceMap: 'scss',
-        }).on('error', sass.logError))
-        .pipe(plumber({
-            errorHandler: onError
+            outputStyle: "expanded",
+            includePaths: "./node_modules",
         }))
-        .pipe(concat('all.css'))
-        .pipe(postcss([
-            cssnext(),
-            cssnano()
-        ]))
-        .pipe(gulp.dest('dist'));
-});
+        .on("error", sass.logError)
+        .pipe(autoprefixer({
+            cascade: false
+        }))
+        .pipe(gulp.dest("./dist/css"))
+        .pipe(rename({
+            suffix: ".min"
+        }))
+        .pipe(cleanCSS())
+        .pipe(gulp.dest("./dist/css"))
+        .pipe(browsersync.stream());
+}
 
-// Process Scripts
-gulp.task('scripts', function () {
-    return gulp.src('assets/js/*.js')
-        .pipe(sourcemaps.init())
-        .pipe(jshint())
-        .pipe(jshint.reporter('default'))
-        .pipe(concat('all.js'))
+// JS task
+function js() {
+    return gulp
+        .src([
+            './assets/js/*.js',
+            '!./js/*.min.js'
+        ])
         .pipe(uglify())
-        .pipe(sourcemaps.write('dist/maps'))
-        .pipe(gulp.dest('dist'));
-});
+        .pipe(rename({
+            suffix: '.min'
+        }))
+        .pipe(gulp.dest('./dist/js'))
+        .pipe(browsersync.stream());
+}
 
-// Process Images
-gulp.task('images', function () {
-    return gulp.src('assets/images/*')
-        .pipe(imagemin())
-        .pipe(gulp.dest('dist/images'));
-});
+function images() {
+    return gulp.src('./assets/images/**/*')
+        .pipe(newer('dist/images/'))
+        //.pipe(imagemin())
+        .pipe(gulp.dest('dist/images/'))
+        .pipe(browsersync.stream());
+}
 
-// Server Task
-gulp.task('server', () => {
-    return connect().use(serve(__dirname))
-        .listen(8080)
-        .on('listening', function () {
-            console.log('Server Running: View at http://localhost:8080');
-        });
-});
+// Watch files
+function watchFiles() {
+    gulp.watch("./assets/scss/*", css);
+    gulp.watch("./assets/js/*", js);
+    gulp.watch("./assets/images/*", images);
+    gulp.watch("./**/*.html", browserSyncReload);
+}
 
-// BrowserSync Task
-gulp.task('browsersync', () => {
-    return browsersync({
-        server: {
-            baseDir: './'
-        }
-    });
-});
+// Define complex tasks
+const vendor = gulp.series(clean, modules);
+const build = gulp.series(vendor, gulp.parallel(css, js, images));
+const watch = gulp.series(build, gulp.parallel(watchFiles, browserSync));
 
-// Browserify Task
-gulp.task('browserify', () => {
-    return browserify('./assets/js/app.js')
-        .transform('babelify', {
-            presets: ['env']
-        })
-        .bundle()
-        .pipe(source('bundle.js'))
-        .pipe(buffer())
-        .pipe(gulp.dest('dist'));
-});
-
-// Clean Task
-gulp.task('clean', () => {
-    return del(['dist']);
-});
-
-// Watch Files For Changes
-gulp.task('watch', function () {
-    gulp.watch('assets/css/*.scss', gulp.series('clean', 'styles', browsersync.reload));
-    gulp.watch('assets/js/*.js', gulp.series('clean', 'scripts', browsersync.reload));
-    gulp.watch('assets/images/*', gulp.series('clean', 'images', browsersync.reload));
-});
-
-gulp.task('default', gulp.parallel('styles', 'scripts', 'images', 'browsersync', 'watch'));
-
+// Export tasks
+exports.css = css;
+exports.js = js;
+exports.images = images;
+exports.clean = clean;
+exports.vendor = vendor;
+exports.build = build;
+exports.watch = watch;
+exports.default = build;
