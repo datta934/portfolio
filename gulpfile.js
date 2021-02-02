@@ -113,23 +113,34 @@ function images() {
         .pipe(browsersync.stream());
 }
 
+
+function docs() {
+    return gulp.src('./assets/docs/**/*')
+        .pipe(newer('dist/docs/'))
+        //.pipe(imagemin())
+        .pipe(gulp.dest('dist/docs/'))
+        .pipe(browsersync.stream());
+}
+
 // Watch files
 function watchFiles() {
     gulp.watch("./assets/scss/*", css);
     gulp.watch("./assets/js/*", js);
     gulp.watch("./assets/images/*", images);
+    gulp.watch("./assets/docs/*", docs);
     gulp.watch("./**/*.html", browserSyncReload);
 }
 
 // Define complex tasks
 const vendor = gulp.series(clean, modules);
-const build = gulp.series(vendor, gulp.parallel(css, js, images));
+const build = gulp.series(vendor, gulp.parallel(css, js, images, docs));
 const watch = gulp.series(build, gulp.parallel(watchFiles, browserSync));
 
 // Export tasks
 exports.css = css;
 exports.js = js;
 exports.images = images;
+exports.docs = docs;
 exports.clean = clean;
 exports.vendor = vendor;
 exports.build = build;
